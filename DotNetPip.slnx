@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="DotNetPip.Tasks/DotNetPip.Tasks.csproj" />
+  <Project Path="DotNetPip/DotNetPip.csproj" />
+  <Project Path="SampleApp/SampleApp.csproj" />
+</Solution>

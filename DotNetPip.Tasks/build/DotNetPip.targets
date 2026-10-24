@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <_DotNetPipTaskAssembly Condition="'$(_DotNetPipTaskAssembly)' == '' AND Exists('$(MSBuildThisFileDirectory)..\tools\DotNetPip.Tasks.dll')">$(MSBuildThisFileDirectory)..\tools\DotNetPip.Tasks.dll</_DotNetPipTaskAssembly>
+    <_DotNetPipTaskAssembly Condition="'$(_DotNetPipTaskAssembly)' == '' AND Exists('$(MSBuildThisFileDirectory)..\bin\$(Configuration)\net10.0\DotNetPip.Tasks.dll')">$(MSBuildThisFileDirectory)..\bin\$(Configuration)\net10.0\DotNetPip.Tasks.dll</_DotNetPipTaskAssembly>
+    <_DotNetPipTaskAssembly Condition="'$(_DotNetPipTaskAssembly)' == '' AND Exists('$(MSBuildThisFileDirectory)..\bin\Debug\net10.0\DotNetPip.Tasks.dll')">$(MSBuildThisFileDirectory)..\bin\Debug\net10.0\DotNetPip.Tasks.dll</_DotNetPipTaskAssembly>
+    <_DotNetPipTaskAssembly Condition="'$(_DotNetPipTaskAssembly)' == '' AND Exists('$(MSBuildThisFileDirectory)..\bin\Release\net10.0\DotNetPip.Tasks.dll')">$(MSBuildThisFileDirectory)..\bin\Release\net10.0\DotNetPip.Tasks.dll</_DotNetPipTaskAssembly>
+  </PropertyGroup>
+
+  <UsingTask TaskName="DotNetPip.Tasks.EnsurePythonEnvironment" AssemblyFile="$(_DotNetPipTaskAssembly)" Condition="'$(_DotNetPipTaskAssembly)' != ''" />
+
+  <Target Name="RestorePythonPackages"
+          BeforeTargets="BeforeBuild"
+          Condition="'$(DesignTimeBuild)' != 'true' AND '@(PythonPackageReference)' != '' AND '$(_DotNetPipTaskAssembly)' != ''">
+    <EnsurePythonEnvironment
+      PackageReferences="@(PythonPackageReference)"
+      OutputDirectory="$(TargetDir)"
+      PythonVersion="$(PythonRuntimeVersion)" />
+  </Target>
+</Project>
+

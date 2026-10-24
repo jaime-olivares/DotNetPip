@@ -1,0 +1,16 @@
+<Project>
+  <PropertyGroup>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <LangVersion>latest</LangVersion>
+    <IsPackable>false</IsPackable>
+    <Authors>jaime_olivares</Authors>
+    <Company>jaime_olivares</Company>
+    <Copyright>Copyright (c) Jaime Olivares</Copyright>
+    <PackageProjectUrl>https://github.com/jaime-olivares/DotNetPip</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/jaime-olivares/DotNetPip.git</RepositoryUrl>
+    <RepositoryType>git</RepositoryType>
+    <PublishRepositoryUrl>true</PublishRepositoryUrl>
+    <PackageRequireLicenseAcceptance>false</PackageRequireLicenseAcceptance>
+  </PropertyGroup>
+</Project>
