@@ -48,7 +48,7 @@ Add `DotNetPip` and your required Python packages directly to your project file:
 
   <!-- Verify whether the nuget version is up to date -->
   <ItemGroup>
-    <PackageReference Include="DotNetPip" Version="1.2.0" />
+    <PackageReference Include="DotNetPip" Version="1.3.0" />
   </ItemGroup>
 
   <!-- Declare your Python AI packages -->
@@ -98,7 +98,7 @@ Console.WriteLine(result);
 
 ```
 
-1. **Build Phase:** When you run `dotnet build`, the `DotNetPip` MSBuild task inspects your `<PythonPackageReference>` items, fetches the wheels, and prepares a isolated local environment in your output directory.
+1. **Build Phase:** `dotnet restore` and `dotnet build` run the same MSBuild task. It resolves `<PythonPackageReference>` items (including transitives) through pip, writes a hash-verified lock to `obj/python.lock.json`, and installs those exact wheels into the output directory. Later restores reuse the lock. `dotnet restore --locked-mode` (or `-p:RestoreLockedMode=true`) fails if the lock would change. Package indexes follow pip (`PIP_INDEX_URL`, `PIP_EXTRA_INDEX_URL`).
 2. **Runtime Phase:** At application startup, `PythonEngine` initializes an embedded CPython instance inside the same process memory space, giving you direct, high-speed access to Python libraries.
 
 ## TODO: Potential Practical Challenges

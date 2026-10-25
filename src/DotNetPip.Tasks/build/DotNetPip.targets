@@ -7,7 +7,7 @@
   <UsingTask TaskName="DotNetPip.Tasks.EnsurePythonEnvironment" AssemblyFile="$(_DotNetPipTaskAssembly)" Condition="'$(_DotNetPipTaskAssembly)' != ''" />
 
   <Target Name="RestorePythonPackages"
-          AfterTargets="ResolveProjectReferences"
+          AfterTargets="Restore;ResolveProjectReferences"
           BeforeTargets="CoreCompile"
           Condition="'$(DesignTimeBuild)' != 'true' AND '$(_DotNetPipTaskAssembly)' != ''">
     <EnsurePythonEnvironment
@@ -15,6 +15,8 @@
       OutputDirectory="$(TargetDir)"
       PythonVersion="$(PythonRuntimeVersion)"
       PythonExecutable="$(PythonExecutable)"
-      ForceRestore="$(DotNetPipForcePythonRestore)" />
+      ForceRestore="$(DotNetPipForcePythonRestore)"
+      LockFilePath="$(MSBuildProjectDirectory)\$(BaseIntermediateOutputPath)python.lock.json"
+      RestoreLockedMode="$(RestoreLockedMode)" />
   </Target>
 </Project>
