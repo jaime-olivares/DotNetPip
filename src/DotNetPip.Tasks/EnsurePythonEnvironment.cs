@@ -17,6 +17,10 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
 
     public string ForceRestore { get; set; } = string.Empty;
 
+    public string LockFilePath { get; set; } = string.Empty;
+
+    public string RestoreLockedMode { get; set; } = string.Empty;
+
     public override bool Execute()
     {
         try
@@ -27,28 +31,63 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
                     "Set <PythonRuntimeVersion> in the .csproj (for example 3.11.5).");
             }
 
-            List<string> packagesToInstall = CollectPackageSpecs();
+            List<PythonLockDirect> directs = CollectDirects();
+            List<string> constraints = PythonLockFile.DefaultConstraints();
+            (string? indexUrl, List<string> extraIndexUrls) = PythonLockFile.IndexesFromEnvironment();
             string targetEnvPath = Path.Combine(OutputDirectory, "python_env");
+            string lockPath = ResolveLockFilePath();
             bool force = IsTrue(ForceRestore);
+            bool lockedMode = IsTrue(RestoreLockedMode);
 
-            if (!force && IsEnvironmentCurrent(requested, packagesToInstall, targetEnvPath, out PythonInstall? cached))
+            PythonLockFile? lockFile = force ? null : PythonLockFile.TryRead(lockPath);
+            bool lockMatches = lockFile is not null
+                && lockFile.Matches(requested.Dotted, directs, constraints, indexUrl, extraIndexUrls);
+
+            if (!force && lockMatches && IsEnvironmentCurrent(requested, lockFile!, targetEnvPath, out PythonInstall? cached))
             {
                 StageNativeLibrary(cached!.Library, requested);
                 Log.LogMessage(MessageImportance.High, "=== [DotNetPip] Python environment is up to date ===");
                 return true;
             }
 
-            Log.LogMessage(MessageImportance.High, "=== [DotNetPip] Restoring Python Dependencies ===");
-
-            string pythonExe = ResolvePythonExecutable(requested);
-            PythonInstall install = ProbePython(pythonExe);
-            if (!PythonVersionSpec.TryParse(install.Version, out PythonVersionSpec actual)
-                || actual != requested)
+            if (!lockMatches)
             {
-                throw new InvalidOperationException(
-                    $"PythonRuntimeVersion is {requested.Dotted} but the interpreter at '{install.Executable}' is {install.Version}. Install Python {requested.Dotted} or set DOTNETPIP_PYTHON.");
+                if (lockedMode)
+                {
+                    throw new InvalidOperationException(
+                        "Python restore is in locked mode but obj/python.lock.json is missing or does not match the project. "
+                        + "Run a local build without RestoreLockedMode to refresh the lock, then retry.");
+                }
+
+                Log.LogMessage(MessageImportance.High, "=== [DotNetPip] Restoring Python Dependencies ===");
+                foreach (PythonLockDirect direct in directs)
+                {
+                    string spec = string.IsNullOrWhiteSpace(direct.Version)
+                        ? direct.Name
+                        : $"{direct.Name}=={direct.Version}";
+                    Log.LogMessage(MessageImportance.High, $" -> Resolving PythonPackageReference: {spec}");
+                }
+
+                PythonInstall resolveInstall = ProbeMatchingPython(requested);
+                lockFile = directs.Count == 0
+                    ? new PythonLockFile
+                    {
+                        Python = requested.Dotted,
+                        IndexUrl = indexUrl,
+                        ExtraIndexUrls = extraIndexUrls,
+                        Constraints = constraints,
+                        Direct = directs,
+                    }
+                    : ResolveLockFile(resolveInstall.Executable, requested.Dotted, directs, constraints, indexUrl, extraIndexUrls);
+                lockFile.Write(lockPath);
+                Log.LogMessage(MessageImportance.High, $" -> Wrote lock with {lockFile.Packages.Count} packages to {lockPath}");
+            }
+            else
+            {
+                Log.LogMessage(MessageImportance.High, "=== [DotNetPip] Restoring Python Dependencies from lock ===");
             }
 
+            PythonInstall install = ProbeMatchingPython(requested);
             Log.LogMessage(MessageImportance.High, $" -> Using Python {install.Version} at {install.Executable}");
             if (!string.IsNullOrEmpty(install.Library))
             {
@@ -57,14 +96,10 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
 
             Directory.CreateDirectory(targetEnvPath);
 
-            foreach (string packageSpec in packagesToInstall)
+            if (lockFile!.Packages.Count > 0
+                && !LockPackagesInstalled(lockFile, Path.Combine(targetEnvPath, "site-packages")))
             {
-                Log.LogMessage(MessageImportance.High, $" -> Resolving PythonPackageReference: {packageSpec}");
-            }
-
-            if (packagesToInstall.Count > 0)
-            {
-                InstallPackagesViaPip(install.Executable, targetEnvPath, packagesToInstall);
+                InstallFromLock(install.Executable, targetEnvPath, lockFile);
             }
 
             StageNativeLibrary(install.Library, requested);
@@ -80,24 +115,121 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         }
     }
 
-    private List<string> CollectPackageSpecs()
+    private PythonInstall ProbeMatchingPython(PythonVersionSpec requested)
     {
-        List<string> packages = new();
-        foreach (var item in PackageReferences ?? Array.Empty<ITaskItem>())
+        string pythonExe = ResolvePythonExecutable(requested);
+        PythonInstall install = ProbePython(pythonExe);
+        if (!PythonVersionSpec.TryParse(install.Version, out PythonVersionSpec actual)
+            || actual != requested)
         {
-            string packageName = item.ItemSpec;
-            string version = item.GetMetadata("Version");
-            packages.Add(string.IsNullOrWhiteSpace(version)
-                ? packageName
-                : $"{packageName}=={version}");
+            throw new InvalidOperationException(
+                $"PythonRuntimeVersion is {requested.Dotted} but the interpreter at '{install.Executable}' is {install.Version}. Install Python {requested.Dotted} or set DOTNETPIP_PYTHON.");
         }
 
-        return packages;
+        return install;
+    }
+
+    private string ResolveLockFilePath()
+    {
+        if (!string.IsNullOrWhiteSpace(LockFilePath))
+        {
+            return LockFilePath;
+        }
+
+        return Path.Combine(OutputDirectory, "python.lock.json");
+    }
+
+    private List<PythonLockDirect> CollectDirects()
+    {
+        List<PythonLockDirect> directs = [];
+        foreach (var item in PackageReferences ?? Array.Empty<ITaskItem>())
+        {
+            directs.Add(new PythonLockDirect
+            {
+                Name = item.ItemSpec,
+                Version = item.GetMetadata("Version") ?? string.Empty,
+            });
+        }
+
+        return directs;
+    }
+
+    private PythonLockFile ResolveLockFile(
+        string pythonExe,
+        string python,
+        List<PythonLockDirect> directs,
+        List<string> constraints,
+        string? indexUrl,
+        List<string> extraIndexUrls)
+    {
+        string workDir = Path.Combine(Path.GetTempPath(), "dotnetpip-" + Guid.NewGuid().ToString("n"));
+        Directory.CreateDirectory(workDir);
+        string reportPath = Path.Combine(workDir, "report.json");
+        string constraintPath = Path.Combine(workDir, "constraints.txt");
+        File.WriteAllLines(constraintPath, constraints);
+
+        List<string> specs = directs.Select(d =>
+            string.IsNullOrWhiteSpace(d.Version) ? d.Name : $"{d.Name}=={d.Version}").ToList();
+
+        string args = "-m pip install --disable-pip-version-check --dry-run --ignore-installed --report \""
+            + reportPath + "\" --constraint \"" + constraintPath + "\" "
+            + string.Join(" ", specs.Select(QuotePipSpec));
+
+        try
+        {
+            string output = RunProcess(pythonExe, args);
+            Log.LogMessage(MessageImportance.Normal, output);
+            if (!File.Exists(reportPath))
+            {
+                throw new InvalidOperationException(
+                    "pip --report did not write a report. Upgrade pip to 22.2 or later (python -m pip install -U pip).");
+            }
+
+            return PythonLockFile.FromPipReport(
+                File.ReadAllText(reportPath),
+                python,
+                directs,
+                constraints,
+                indexUrl,
+                extraIndexUrls);
+        }
+        finally
+        {
+            try { Directory.Delete(workDir, recursive: true); } catch { /* ignore */ }
+        }
+    }
+
+    private void InstallFromLock(string pythonExe, string envPath, PythonLockFile lockFile)
+    {
+        string sitePackagesDir = Path.Combine(envPath, "site-packages");
+        if (Directory.Exists(sitePackagesDir))
+        {
+            Directory.Delete(sitePackagesDir, recursive: true);
+        }
+
+        Directory.CreateDirectory(sitePackagesDir);
+
+        string workDir = Path.Combine(Path.GetTempPath(), "dotnetpip-" + Guid.NewGuid().ToString("n"));
+        Directory.CreateDirectory(workDir);
+        string requirementsPath = Path.Combine(workDir, "requirements.txt");
+        File.WriteAllText(requirementsPath, lockFile.ToHashRequirements());
+
+        string args = "-m pip install --disable-pip-version-check --require-hashes --no-deps --target \""
+            + sitePackagesDir + "\" -r \"" + requirementsPath + "\"";
+        try
+        {
+            string output = RunProcess(pythonExe, args);
+            Log.LogMessage(MessageImportance.Normal, output);
+        }
+        finally
+        {
+            try { Directory.Delete(workDir, recursive: true); } catch { /* ignore */ }
+        }
     }
 
     private bool IsEnvironmentCurrent(
         PythonVersionSpec requested,
-        List<string> packages,
+        PythonLockFile lockFile,
         string targetEnvPath,
         out PythonInstall? install)
     {
@@ -127,13 +259,7 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
             return false;
         }
 
-        foreach (string spec in packages)
-        {
-            if (!IsPackageInstalled(sitePackages, spec))
-                return false;
-        }
-
-        if (!HasNumpyMajor1(sitePackages))
+        if (!LockPackagesInstalled(lockFile, sitePackages))
             return false;
 
         string executable = root.TryGetProperty("PythonExecutable", out JsonElement exec)
@@ -156,6 +282,24 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         return true;
     }
 
+    private static bool LockPackagesInstalled(PythonLockFile lockFile, string sitePackages)
+    {
+        if (!Directory.Exists(sitePackages))
+        {
+            return false;
+        }
+
+        foreach (PythonLockPackage package in lockFile.Packages)
+        {
+            if (!IsPackageInstalled(sitePackages, package.Name, package.Version))
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private bool HasStagedLibrary(PythonVersionSpec spec)
     {
         foreach (string name in spec.StagedLibraryFileNames())
@@ -167,9 +311,8 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         return false;
     }
 
-    private static bool IsPackageInstalled(string sitePackages, string spec)
+    private static bool IsPackageInstalled(string sitePackages, string name, string version)
     {
-        SplitSpec(spec, out string name, out string version);
         foreach (string folder in DistInfoFolderNames(name, version))
         {
             if (Directory.Exists(Path.Combine(sitePackages, folder)))
@@ -193,35 +336,6 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         }
 
         return false;
-    }
-
-    private static bool HasNumpyMajor1(string sitePackages)
-    {
-        foreach (string dir in Directory.EnumerateDirectories(sitePackages, "numpy-*.dist-info"))
-        {
-            string folder = Path.GetFileName(dir) ?? string.Empty;
-            if (folder.StartsWith("numpy-1.", StringComparison.OrdinalIgnoreCase)
-                || folder.StartsWith("numpy-0.", StringComparison.OrdinalIgnoreCase))
-            {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
-    private static void SplitSpec(string spec, out string name, out string version)
-    {
-        int eq = spec.IndexOf("==", StringComparison.Ordinal);
-        if (eq < 0)
-        {
-            name = spec;
-            version = string.Empty;
-            return;
-        }
-
-        name = spec[..eq];
-        version = spec[(eq + 2)..];
     }
 
     private static IEnumerable<string> DistInfoFolderNames(string name, string version)
@@ -351,31 +465,6 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         }
     }
 
-    private void InstallPackagesViaPip(string pythonExe, string envPath, List<string> packages)
-    {
-        string sitePackagesDir = Path.Combine(envPath, "site-packages");
-        Directory.CreateDirectory(sitePackagesDir);
-
-        string constraintPath = Path.Combine(envPath, "constraints.txt");
-        File.WriteAllText(constraintPath, "numpy<2" + Environment.NewLine);
-
-        string args = "-m pip install --disable-pip-version-check --constraint \"" + constraintPath
-            + "\" --target \"" + sitePackagesDir + "\" "
-            + string.Join(" ", packages.Select(QuotePipSpec));
-        string output = RunProcess(pythonExe, args);
-        Log.LogMessage(MessageImportance.Normal, output);
-
-        foreach (string leftover in Directory.GetDirectories(sitePackagesDir, "numpy*"))
-        {
-            Directory.Delete(leftover, recursive: true);
-        }
-
-        string pinNumpy = "-m pip install --disable-pip-version-check --target \""
-            + sitePackagesDir + "\" \"numpy<2\"";
-        string numpyOutput = RunProcess(pythonExe, pinNumpy);
-        Log.LogMessage(MessageImportance.Normal, numpyOutput);
-    }
-
     private static string QuotePipSpec(string spec)
     {
         return spec.Contains('<') || spec.Contains('>') || spec.Contains(' ')
@@ -430,9 +519,11 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
             throw new InvalidOperationException($"Failed to launch '{fileName}'.");
         }
 
-        string output = process.StandardOutput.ReadToEnd();
-        string error = process.StandardError.ReadToEnd();
+        Task<string> outputTask = process.StandardOutput.ReadToEndAsync();
+        Task<string> errorTask = process.StandardError.ReadToEndAsync();
         process.WaitForExit();
+        string output = outputTask.GetAwaiter().GetResult();
+        string error = errorTask.GetAwaiter().GetResult();
 
         if (process.ExitCode != 0)
         {
