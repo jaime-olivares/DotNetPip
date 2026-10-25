@@ -9,10 +9,11 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\DotNetPip\DotNetPip.csproj" />
+    <ProjectReference Include="../../src/DotNetPip/DotNetPip.csproj" />
+    <ProjectReference Include="../../src/DotNetPip.Tasks/DotNetPip.Tasks.csproj" ReferenceOutputAssembly="false" PrivateAssets="all" />
   </ItemGroup>
 
-  <Import Project="..\DotNetPip.Tasks\build\DotNetPip.targets" />
+  <Import Project="../../src/DotNetPip.Tasks/build/DotNetPip.targets" />
 
   <!-- Declarative Python Dependencies -->
   <ItemGroup>

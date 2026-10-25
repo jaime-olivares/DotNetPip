@@ -9,3 +9,6 @@
 *.user
 *.ini
 APIKEY.txt
+**/__pycache__/
+**/.venv/
+**/*.egg-info/

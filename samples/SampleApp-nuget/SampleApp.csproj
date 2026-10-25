@@ -1,0 +1,26 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net10.0</TargetFramework>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Declare your Python runtime -->
+  <PropertyGroup>
+    <PythonRuntimeVersion>3.11.5</PythonRuntimeVersion>
+  </PropertyGroup>
+
+  <!-- Verify whether the nuget version is up to date -->
+  <ItemGroup>
+    <PackageReference Include="DotNetPip" Version="1.2.0" />
+  </ItemGroup>
+
+  <!-- Declarative Python Dependencies -->
+  <ItemGroup>
+    <PythonPackageReference Include="transformers" Version="4.35.0" />
+    <PythonPackageReference Include="torch" Version="2.1.0" />
+  </ItemGroup>
+
+</Project>

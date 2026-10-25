@@ -1,6 +1,6 @@
 #!/usr/bin/env pwsh
 # Build Release binaries and generate DotNetPip.*.nupkg under artifacts/.
-# Package version is read from DotNetPip/DotNetPip.csproj (<Version>).
+# Package version is read from src/DotNetPip/DotNetPip.csproj (<Version>).
 # Usage: ./scripts/pack.ps1 [-Configuration Release]
 param(
     [string]$Configuration = $(if ($env:CONFIGURATION) { $env:CONFIGURATION } else { "Release" })
@@ -13,7 +13,7 @@ $OutDir = Join-Path $Root "artifacts"
 
 Set-Location $Root
 
-dotnet pack (Join-Path $Root "DotNetPip/DotNetPip.csproj") `
+dotnet pack (Join-Path $Root "src/DotNetPip/DotNetPip.csproj") `
     --configuration $Configuration `
     --output $OutDir `
     "-p:PackageOutputPath=$OutDir"

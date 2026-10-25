@@ -1,0 +1,10 @@
+[project]
+name = "sampleapp-python"
+version = "1.0.0"
+description = "Native Python counterpart of the DotNetPip SampleApp"
+requires-python = ">=3.11"
+dependencies = [
+    "transformers==4.35.0",
+    "torch==2.1.0",
+    "numpy<2",
+]

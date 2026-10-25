@@ -1,0 +1,20 @@
+<Project>
+  <PropertyGroup>
+    <_DotNetPipTaskAssembly Condition="'$(_DotNetPipTaskAssembly)' == '' AND Exists('$(MSBuildThisFileDirectory)..\tools\DotNetPip.Tasks.dll')">$(MSBuildThisFileDirectory)..\tools\DotNetPip.Tasks.dll</_DotNetPipTaskAssembly>
+    <_DotNetPipTaskAssembly Condition="'$(_DotNetPipTaskAssembly)' == ''">$(MSBuildThisFileDirectory)..\bin\$(Configuration)\net10.0\DotNetPip.Tasks.dll</_DotNetPipTaskAssembly>
+  </PropertyGroup>
+
+  <UsingTask TaskName="DotNetPip.Tasks.EnsurePythonEnvironment" AssemblyFile="$(_DotNetPipTaskAssembly)" Condition="'$(_DotNetPipTaskAssembly)' != ''" />
+
+  <Target Name="RestorePythonPackages"
+          AfterTargets="ResolveProjectReferences"
+          BeforeTargets="CoreCompile"
+          Condition="'$(DesignTimeBuild)' != 'true' AND '$(_DotNetPipTaskAssembly)' != ''">
+    <EnsurePythonEnvironment
+      PackageReferences="@(PythonPackageReference)"
+      OutputDirectory="$(TargetDir)"
+      PythonVersion="$(PythonRuntimeVersion)"
+      PythonExecutable="$(PythonExecutable)"
+      ForceRestore="$(DotNetPipForcePythonRestore)" />
+  </Target>
+</Project>

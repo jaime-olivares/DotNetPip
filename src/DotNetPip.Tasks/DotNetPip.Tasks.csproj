@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="..\DotNetPip.Shared\PythonVersionSpec.cs" Link="PythonVersionSpec.cs" />
+  </ItemGroup>
+
+  <ItemGroup>
     <PackageReference Include="Microsoft.Build.Framework" Version="17.14.28" PrivateAssets="All" />
     <PackageReference Include="Microsoft.Build.Utilities.Core" Version="17.14.28" PrivateAssets="All" /> 
   </ItemGroup>

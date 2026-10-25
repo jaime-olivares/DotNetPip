@@ -1,6 +1,6 @@
 # Internal instructions for local publishing:
 
-The package version comes from `<Version>` in `DotNetPip/DotNetPip.csproj`.
+The package version comes from `<Version>` in `src/DotNetPip/DotNetPip.csproj`.
 
 ## Publish on macOS
 ```bash

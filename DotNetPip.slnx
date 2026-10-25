@@ -1,5 +1,19 @@
 <Solution>
-  <Project Path="DotNetPip.Tasks/DotNetPip.Tasks.csproj" />
-  <Project Path="DotNetPip/DotNetPip.csproj" />
-  <Project Path="SampleApp/SampleApp.csproj" />
+  <Folder Name="/src/">
+    <Project Path="src/DotNetPip/DotNetPip.csproj" />
+    <Project Path="src/DotNetPip.Tasks/DotNetPip.Tasks.csproj" />
+  </Folder>
+  <Folder Name="/samples/SampleApp-local/">
+    <Project Path="samples/SampleApp-local/SampleApp.csproj" />
+  </Folder>
+  <Folder Name="/samples/SampleApp-nuget/">
+    <Project Path="samples/SampleApp-nuget/SampleApp.csproj" />
+  </Folder>
+  <Folder Name="/samples/SampleApp-python/">
+    <File Path="samples/SampleApp-python/program.py" />
+    <File Path="samples/SampleApp-python/pyproject.toml" />
+  </Folder>
 </Solution>
+
+
+

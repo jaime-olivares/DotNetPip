@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Build Release binaries and generate DotNetPip.*.nupkg under artifacts/.
-# Package version is read from DotNetPip/DotNetPip.csproj (<Version>).
+# Package version is read from src/DotNetPip/DotNetPip.csproj (<Version>).
 # Usage: ./scripts/pack.sh
 set -euo pipefail
 
@@ -10,7 +10,7 @@ OUTDIR="${ROOT}/artifacts"
 
 cd "$ROOT"
 
-dotnet pack "${ROOT}/DotNetPip/DotNetPip.csproj" \
+dotnet pack "${ROOT}/src/DotNetPip/DotNetPip.csproj" \
   --configuration "${CONFIG}" \
   --output "${OUTDIR}" \
   -p:PackageOutputPath="${OUTDIR}"

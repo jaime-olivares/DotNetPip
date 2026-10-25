@@ -8,10 +8,12 @@
 
 `DotNetPip` is an ultra-lightweight, in-process interoperability engine that embeds Python directly inside your C# applications. It lets you declare Python packages directly in your `.csproj` file just like standard NuGet packages, restoring and isolating them automatically during build time.
 
+This is still a Proof of Concept. Please read below [how to contribute](#how-to-contribute)
+
 ## Installation
 
 ```bash
-dotnet add package DotNetPip --version 1.0.0
+dotnet add package DotNetPip
 ```
 
 Published on [nuget.org](https://www.nuget.org/packages/DotNetPip/).
@@ -37,6 +39,11 @@ Add `DotNetPip` and your required Python packages directly to your project file:
     <TargetFramework>net10.0</TargetFramework>
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
+  </PropertyGroup>
+
+  <!-- Declare your Python runtime -->
+  <PropertyGroup>
+    <PythonRuntimeVersion>3.11.5</PythonRuntimeVersion>  
   </PropertyGroup>
 
   <!-- Add DotNetPip -->
