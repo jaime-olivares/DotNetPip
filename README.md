@@ -46,9 +46,9 @@ Add `DotNetPip` and your required Python packages directly to your project file:
     <PythonRuntimeVersion>3.11.5</PythonRuntimeVersion>  
   </PropertyGroup>
 
-  <!-- Add DotNetPip -->
+  <!-- Verify whether the nuget version is up to date -->
   <ItemGroup>
-    <PackageReference Include="DotNetPip" Version="1.0.0" />
+    <PackageReference Include="DotNetPip" Version="1.2.0" />
   </ItemGroup>
 
   <!-- Declare your Python AI packages -->
