@@ -76,18 +76,18 @@ Console.WriteLine(result);
 ## How It Works
 
 ```
-┌───────────────────────────────────────────────────────────┐
-│                      BUILD TIME                           │
-│  .csproj (<PythonPackageReference>)                       │
-│    └─► MSBuild Task downloads wheels & provisions env     │
-└─────────────────────────────┬─────────────────────────────┘
+┌────────────────────────────────────────────────────────┐
+│                      BUILD TIME                        │
+│  .csproj (<PythonPackageReference>)                    │
+│    └─► MSBuild Task downloads wheels & provisions env  │
+└─────────────────────────────┬──────────────────────────┘
                               │
-┌─────────────────────────────▼─────────────────────────────┐
-│                      RUNTIME                              │
-│  C# (.NET 10) Process                                     │
-│    └─► Embedded CPython Engine (In-Memory)                │
-│          └─► Zero-Copy Data Sharing (Span<T>)             │
-└───────────────────────────────────────────────────────────┘
+┌─────────────────────────────▼──────────────────────────┐
+│                       RUNTIME                          │
+│  C# (.NET 10) Process                                  │
+│    └─► Embedded CPython Engine (In-Memory)             │
+│          └─► Zero-Copy Data Sharing (Span<T>)          │
+└────────────────────────────────────────────────────────┘
 
 ```
 
@@ -103,3 +103,12 @@ While this architectural proposal is highly innovative, executing it comes with 
 - Native Binary Distribution: Bundling native Python dynamic libraries (python311.dll / .so) and ensuring they resolve correctly across Windows, Linux, and macOS deployment targets requires robust publishing scripts.
 
 - ABI stability: CPython’s full C-API/ABI changes between 3.x minor versions, so native extensions (PyTorch, NumPy) must match the embedded interpreter (e.g. a `cp311` wheel with Python 3.11). The Stable ABI (`abi3`) is the opt-in subset that stays compatible across 3.x. CUDA builds add another axis: a wheel must also match the installed CUDA toolkit.
+
+## How to contribute
+
+Contributions are welcome! Here are a few ways you can help support and grow the project:
+
+* **Star the repository:** Giving the project a star helps increase visibility and attract more contributors.
+* **Share real-world samples:** Code snippets, configuration examples, or real-life usage scenarios are highly appreciated and will be added to the sample library.
+* **Submit Issues & Pull Requests:** Bug reports, feature suggestions, and code updates are always welcome.
+* **Spread the word:** Sharing the project on social media or technical networks helps expand our reach.
