@@ -96,28 +96,10 @@ Console.WriteLine(result);
 
 ## TODO: Potential Practical Challenges
 
-While the architectural vision is highly innovative, executing it comes with real-world engineering hurdles that we will need to navigate:
+While this architectural proposal is highly innovative, executing it comes with real-world engineering hurdles that we will need to navigate:
 
 - The Python Global Interpreter Lock (GIL): Standard CPython is single-threaded for CPU-bound Python bytecode due to the GIL. (Though modern Python versions support free-threaded builds, managing thread safety across .NET multi-threading and CPython state requires careful synchronization).
 
 - Native Binary Distribution: Bundling native Python dynamic libraries (python311.dll / .so) and ensuring they resolve correctly across Windows, Linux, and macOS deployment targets requires robust publishing scripts.
 
-- ABI Stability: CPython's C-API is stable across minor versions, but major version changes or third-party C-extensions (like PyTorch compiled with specific CUDA toolkits) can occasionally introduce binary compatibility edge cases.
-
-## Building the NuGet package
-
-The package version comes from `<Version>` in `DotNetPip/DotNetPip.csproj`.
-
-```bash
-./scripts/pack.sh          # macOS / Linux
-./scripts/pack.ps1         # Windows / PowerShell
-```
-
-Packages are written to `artifacts/`. Publish to nuget.org as **jaime_olivares**:
-
-```bash
-export NUGET_API_KEY=<your-key>
-./scripts/push.sh
-```
-
-Tag a release (for example `v1.0.0`) to pack and push from GitHub Actions (secret name: `NUGET_API_KEY`). The nupkg version is still the one in `DotNetPip.csproj`.
+- ABI stability: CPython’s full C-API/ABI changes between 3.x minor versions, so native extensions (PyTorch, NumPy) must match the embedded interpreter (e.g. a `cp311` wheel with Python 3.11). The Stable ABI (`abi3`) is the opt-in subset that stays compatible across 3.x. CUDA builds add another axis: a wheel must also match the installed CUDA toolkit.
