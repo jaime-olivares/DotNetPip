@@ -132,9 +132,7 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
     private string ResolveLockFilePath()
     {
         if (!string.IsNullOrWhiteSpace(LockFilePath))
-        {
             return LockFilePath;
-        }
 
         return Path.Combine(OutputDirectory, "python.lock.json");
     }
@@ -237,9 +235,7 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         string manifestPath = Path.Combine(OutputDirectory, "python-deps.json");
         string sitePackages = Path.Combine(targetEnvPath, "site-packages");
         if (!File.Exists(manifestPath) || !Directory.Exists(sitePackages))
-        {
             return false;
-        }
 
         using JsonDocument doc = JsonDocument.Parse(File.ReadAllText(manifestPath));
         JsonElement root = doc.RootElement;
@@ -255,9 +251,7 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
             && File.Exists(PythonExecutable)
             && root.TryGetProperty("PythonExecutable", out JsonElement exeProp)
             && !string.Equals(exeProp.GetString(), PythonExecutable, StringComparison.OrdinalIgnoreCase))
-        {
             return false;
-        }
 
         if (!LockPackagesInstalled(lockFile, sitePackages))
             return false;
@@ -285,16 +279,12 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
     private static bool LockPackagesInstalled(PythonLockFile lockFile, string sitePackages)
     {
         if (!Directory.Exists(sitePackages))
-        {
             return false;
-        }
 
         foreach (PythonLockPackage package in lockFile.Packages)
         {
             if (!IsPackageInstalled(sitePackages, package.Name, package.Version))
-            {
                 return false;
-            }
         }
 
         return true;
@@ -328,9 +318,7 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
                 {
                     if (folder.StartsWith(prefix + "-", StringComparison.OrdinalIgnoreCase)
                         && folder.EndsWith(".dist-info", StringComparison.OrdinalIgnoreCase))
-                    {
                         return true;
-                    }
                 }
             }
         }
@@ -382,9 +370,7 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
         {
             string? found = FindOnPath(name);
             if (found != null)
-            {
                 return found;
-            }
         }
 
         foreach (string path in requested.WellKnownExecutables())

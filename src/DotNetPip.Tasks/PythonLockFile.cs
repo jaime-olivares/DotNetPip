@@ -1,7 +1,7 @@
-using System.Text;
 using System.Text.Encodings.Web;
 using System.Text.Json;
 using System.Text.Json.Serialization;
+using System.Text.RegularExpressions;
 
 namespace DotNetPip.Tasks;
 
@@ -33,9 +33,7 @@ internal sealed class PythonLockFile
     public static PythonLockFile? TryRead(string path)
     {
         if (string.IsNullOrWhiteSpace(path) || !File.Exists(path))
-        {
             return null;
-        }
 
         try
         {
@@ -66,34 +64,22 @@ internal sealed class PythonLockFile
         IReadOnlyList<string> extraIndexUrls)
     {
         if (LockVersion != CurrentLockVersion)
-        {
             return false;
-        }
 
         if (!string.Equals(Python, python, StringComparison.Ordinal))
-        {
             return false;
-        }
 
         if (!StringSetEquals(Constraints, constraints))
-        {
             return false;
-        }
 
         if (!StringEqualsOrEmpty(IndexUrl, indexUrl))
-        {
             return false;
-        }
 
         if (!StringSetEquals(ExtraIndexUrls, extraIndexUrls))
-        {
             return false;
-        }
 
         if (Direct.Count != direct.Count)
-        {
             return false;
-        }
 
         List<string> expected = direct.Select(DirectKey).OrderBy(s => s, StringComparer.Ordinal).ToList();
         List<string> actual = Direct.Select(DirectKey).OrderBy(s => s, StringComparer.Ordinal).ToList();
@@ -136,7 +122,7 @@ internal sealed class PythonLockFile
 
     public string ToHashRequirements()
     {
-        StringBuilder builder = new();
+        string requirements = "";
         foreach (PythonLockPackage package in Packages)
         {
             if (string.IsNullOrWhiteSpace(package.Url) || string.IsNullOrWhiteSpace(package.Sha256))
@@ -145,34 +131,21 @@ internal sealed class PythonLockFile
                     $"Lock entry '{package.Name}=={package.Version}' is missing url or sha256.");
             }
 
-            builder.Append(package.Name)
-                .Append(" @ ")
-                .Append(package.Url)
-                .Append(" --hash=sha256:")
-                .Append(package.Sha256)
-                .Append('\n');
+            requirements += $"""
+                {package.Name} @ {package.Url} --hash=sha256:{package.Sha256}
+
+                """;
         }
 
-        return builder.ToString();
+        return requirements;
     }
 
     public static string CanonicalName(string name)
     {
         if (string.IsNullOrWhiteSpace(name))
-        {
             return string.Empty;
-        }
 
-        char[] chars = name.Trim().ToLowerInvariant().ToCharArray();
-        for (int i = 0; i < chars.Length; i++)
-        {
-            if (chars[i] is '_' or '.')
-            {
-                chars[i] = '-';
-            }
-        }
-
-        return new string(chars);
+        return Regex.Replace(name.Trim().ToLowerInvariant(), "[_.]", "-");
     }
 
     public static (string? IndexUrl, List<string> ExtraIndexUrls) IndexesFromEnvironment()
@@ -242,25 +215,19 @@ internal sealed class PythonLockFile
     {
         if (!downloadInfo.TryGetProperty("archive_info", out JsonElement archive)
             || archive.ValueKind != JsonValueKind.Object)
-        {
             return string.Empty;
-        }
 
         if (archive.TryGetProperty("hashes", out JsonElement hashes)
             && hashes.ValueKind == JsonValueKind.Object
             && hashes.TryGetProperty("sha256", out JsonElement shaProp))
-        {
             return shaProp.GetString() ?? string.Empty;
-        }
 
         if (archive.TryGetProperty("hash", out JsonElement hashProp))
         {
             string? combined = hashProp.GetString();
             const string prefix = "sha256=";
             if (!string.IsNullOrEmpty(combined) && combined.StartsWith(prefix, StringComparison.OrdinalIgnoreCase))
-            {
                 return combined[prefix.Length..];
-            }
         }
 
         return string.Empty;
