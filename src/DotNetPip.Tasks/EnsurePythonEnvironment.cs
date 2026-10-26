@@ -1,4 +1,5 @@
 using System.Diagnostics;
+using System.Runtime.InteropServices;
 using System.Text.Json;
 using Microsoft.Build.Framework;
 
@@ -32,8 +33,9 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
             }
 
             List<PythonLockDirect> directs = CollectDirects();
-            List<string> constraints = PythonLockFile.DefaultConstraints();
-            (string? indexUrl, List<string> extraIndexUrls) = PythonLockFile.IndexesFromEnvironment();
+            List<string> constraints = PythonLockFile.DefaultConstraints(directs);
+            (string? indexUrl, List<string> extraFromEnv) = PythonLockFile.IndexesFromEnvironment();
+            List<string> extraIndexUrls = PythonLockFile.ExtraIndexesFor(directs, extraFromEnv);
             string targetEnvPath = Path.Combine(OutputDirectory, "python_env");
             string lockPath = ResolveLockFilePath();
             bool force = IsTrue(ForceRestore);
@@ -67,6 +69,9 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
                         : $"{direct.Name}=={direct.Version}";
                     Log.LogMessage(MessageImportance.High, $" -> Resolving PythonPackageReference: {spec}");
                 }
+
+                foreach (string extra in extraIndexUrls)
+                    Log.LogMessage(MessageImportance.High, $" -> Extra package index: {extra}");
 
                 PythonInstall resolveInstall = ProbeMatchingPython(requested);
                 lockFile = directs.Count == 0
@@ -170,8 +175,14 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
             string.IsNullOrWhiteSpace(d.Version) ? d.Name : $"{d.Name}=={d.Version}").ToList();
 
         string args = "-m pip install --disable-pip-version-check --dry-run --ignore-installed --report \""
-            + reportPath + "\" --constraint \"" + constraintPath + "\" "
-            + string.Join(" ", specs.Select(QuotePipSpec));
+            + reportPath + "\"";
+        if (constraints.Count > 0)
+            args += " --constraint \"" + constraintPath + "\"";
+        if (!string.IsNullOrWhiteSpace(indexUrl))
+            args += " --index-url \"" + indexUrl + "\"";
+        foreach (string extra in extraIndexUrls)
+            args += " --extra-index-url \"" + extra + "\"";
+        args += " " + string.Join(" ", specs.Select(QuotePipSpec));
 
         try
         {
@@ -190,6 +201,11 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
                 constraints,
                 indexUrl,
                 extraIndexUrls);
+        }
+        catch (InvalidOperationException ex)
+        {
+            throw new InvalidOperationException(
+                $"Could not resolve Python packages for Python {python} ({pythonExe}) on {RuntimeInformation.OSArchitecture}.\n{ex.Message}");
         }
         finally
         {
