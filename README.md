@@ -98,7 +98,7 @@ Console.WriteLine(result);
 
 ```
 
-1. **Build Phase:** `dotnet restore` and `dotnet build` run the same MSBuild task. It resolves `<PythonPackageReference>` items (including transitives) through pip, writes a hash-verified lock to `obj/python.lock.json`, and installs those exact wheels into the output directory. Later restores reuse the lock. `dotnet restore --locked-mode` (or `-p:RestoreLockedMode=true`) fails if the lock would change. Package indexes follow pip (`PIP_INDEX_URL`, `PIP_EXTRA_INDEX_URL`). Torch packages also search `https://download.pytorch.org/whl/cpu` so Windows ARM64 CPU wheels resolve without extra `.csproj` metadata.
+1. **Build Phase:** `dotnet restore` and `dotnet build` run the same MSBuild task. It resolves `<PythonPackageReference>` items (including transitives) through pip, writes a hash-verified lock to `obj/python.lock.json`, and installs those exact wheels into the output directory. Later restores reuse the lock. `dotnet restore --locked-mode` (or `-p:RestoreLockedMode=true`) fails if the lock would change. Package indexes follow pip (`PIP_INDEX_URL`, `PIP_EXTRA_INDEX_URL`).
 2. **Runtime Phase:** At application startup, `PythonEngine` initializes an embedded CPython instance inside the same process memory space, giving you direct, high-speed access to Python libraries.
 
 ## TODO: Potential Practical Challenges

@@ -33,9 +33,8 @@ public class EnsurePythonEnvironment : Microsoft.Build.Utilities.Task
             }
 
             List<PythonLockDirect> directs = CollectDirects();
-            List<string> constraints = PythonLockFile.DefaultConstraints(directs);
-            (string? indexUrl, List<string> extraFromEnv) = PythonLockFile.IndexesFromEnvironment();
-            List<string> extraIndexUrls = PythonLockFile.ExtraIndexesFor(directs, extraFromEnv);
+            List<string> constraints = PythonLockFile.DefaultConstraints();
+            (string? indexUrl, List<string> extraIndexUrls) = PythonLockFile.IndexesFromEnvironment();
             string targetEnvPath = Path.Combine(OutputDirectory, "python_env");
             string lockPath = ResolveLockFilePath();
             bool force = IsTrue(ForceRestore);

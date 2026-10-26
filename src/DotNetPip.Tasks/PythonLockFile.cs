@@ -9,7 +9,6 @@ internal sealed class PythonLockFile
 {
     public const int CurrentLockVersion = 1;
     public const string DefaultConstraint = "numpy<2";
-    public const string PytorchCpuIndex = "https://download.pytorch.org/whl/cpu";
 
     private static readonly JsonSerializerOptions JsonOptions = new()
     {
@@ -29,20 +28,7 @@ internal sealed class PythonLockFile
     public List<PythonLockDirect> Direct { get; set; } = [];
     public List<PythonLockPackage> Packages { get; set; } = [];
 
-    public static List<string> DefaultConstraints(IReadOnlyList<PythonLockDirect> directs)
-    {
-        foreach (PythonLockDirect direct in directs)
-        {
-            if (CanonicalName(direct.Name) != "torch")
-                continue;
-            if (!PythonVersionSpec.TryParse(direct.Version, out PythonVersionSpec spec))
-                continue;
-            if (spec.Major == 2 && spec.Minor <= 1)
-                return [DefaultConstraint];
-        }
-
-        return [];
-    }
+    public static List<string> DefaultConstraints() => [DefaultConstraint];
 
     public static PythonLockFile? TryRead(string path)
     {
@@ -173,25 +159,6 @@ internal sealed class PythonLockFile
         }
 
         return (index, extra);
-    }
-
-    public static List<string> ExtraIndexesFor(IReadOnlyList<PythonLockDirect> directs, IReadOnlyList<string> extraFromEnv)
-    {
-        List<string> extra = extraFromEnv.Where(s => !string.IsNullOrWhiteSpace(s)).ToList();
-        if (!directs.Any(IsTorchFamily))
-            return extra;
-
-        if (extra.Any(u => u.Contains("download.pytorch.org", StringComparison.OrdinalIgnoreCase)))
-            return extra;
-
-        extra.Add(PytorchCpuIndex);
-        return extra;
-    }
-
-    public static bool IsTorchFamily(PythonLockDirect direct)
-    {
-        string name = CanonicalName(direct.Name);
-        return name is "torch" or "torchvision" or "torchaudio";
     }
 
     private static PythonLockPackage ParseInstallItem(JsonElement item)
