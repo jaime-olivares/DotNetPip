@@ -41,7 +41,7 @@ Add `DotNetPip` and your required Python packages directly to your project file:
     <Nullable>enable</Nullable>
   </PropertyGroup>
 
-  <!-- Declare your Python runtime -->
+  <!-- Declare your Python runtime. Be sure it matches. -->
   <PropertyGroup>
     <PythonRuntimeVersion>3.11.5</PythonRuntimeVersion>  
   </PropertyGroup>
@@ -51,7 +51,7 @@ Add `DotNetPip` and your required Python packages directly to your project file:
     <PackageReference Include="DotNetPip" Version="1.3.0" />
   </ItemGroup>
 
-  <!-- Declare your Python AI packages -->
+  <!-- Declare your Python AI packages. They must match the Python runtime. -->
   <ItemGroup>
     <PythonPackageReference Include="transformers" Version="4.35.0" />
     <PythonPackageReference Include="torch" Version="2.1.0" />
@@ -107,7 +107,7 @@ While this architectural proposal is highly innovative, executing it comes with 
 
 - The Python Global Interpreter Lock (GIL): Standard CPython is single-threaded for CPU-bound Python bytecode due to the GIL. (Though modern Python versions support free-threaded builds, managing thread safety across .NET multi-threading and CPython state requires careful synchronization).
 
-- Native Binary Distribution: Bundling native Python dynamic libraries (python311.dll / .so) and ensuring they resolve correctly across Windows, Linux, and macOS deployment targets requires robust publishing scripts.
+- Native Binary Distribution: Bundling native Python dynamic libraries (i.e. python311.dll / .so) and ensuring they resolve correctly across Windows, Linux, and macOS deployment targets requires robust publishing scripts.
 
 - ABI stability: CPython’s full C-API/ABI changes between 3.x minor versions, so native extensions (PyTorch, NumPy) must match the embedded interpreter (e.g. a `cp311` wheel with Python 3.11). The Stable ABI (`abi3`) is the opt-in subset that stays compatible across 3.x. CUDA builds add another axis: a wheel must also match the installed CUDA toolkit.
 
